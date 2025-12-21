@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {IERC20} from "src/interfaces/IERC20.sol";
+
 import {RewardAccumulator} from "src/libraries/RewardAccumulator.sol";
 
 contract StakingRewards {
