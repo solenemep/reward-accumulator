@@ -51,19 +51,19 @@ library RewardAccumulator {
 
     function updateActor(Actor storage a, Entity storage e, uint256 stake, uint256 paid)
         internal
-        returns (uint256 reward)
+        returns (uint256 rewards)
     {
         a.accumulator = _accumulateActor(a.accumulator, a.checkpoint, stake, e.accumulator);
         a.checkpoint = e.accumulator;
 
-        reward = a.accumulator - paid;
+        if (a.accumulator > paid) rewards = a.accumulator - paid;
     }
 
     function previewActor(Actor storage a, uint256 stake, uint256 eAccumulator) internal view returns (uint256) {
         return _accumulateActor(a.accumulator, a.checkpoint, stake, eAccumulator);
     }
 
-    /* ================= INTERNAL HELPERS ================= */
+    /* ================= INTERNAL ================= */
 
     function _accumulateGlobal(uint256 accumulator, uint256 rate, uint256 lastUpdate)
         private

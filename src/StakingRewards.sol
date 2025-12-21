@@ -29,7 +29,7 @@ contract StakingRewards {
         STAKING_TOKEN = IERC20(stakingTokenAddress);
         REWARD_TOKEN = IERC20(rewardTokenAddress);
 
-        global.lastUpdate = block.timestamp;
+        _syncGlobal();
     }
 
     /* ================= USER ACTIONS ================= */
@@ -90,7 +90,7 @@ contract StakingRewards {
         return a.previewActor(actorStaked[actor][entity], e.previewEntity(g.previewGlobal())) - actorPaid[actor][entity];
     }
 
-    /* ================= INTERNAL SYNC ================= */
+    /* ================= INTERNAL ================= */
 
     function _syncGlobal() internal {
         global.updateGlobal(globalRate());
