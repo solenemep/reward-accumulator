@@ -11,6 +11,7 @@ contract StakingRewardsTest is Test {
     uint256 public constant PRECISION = 1e18;
     uint256 public constant GLOBAL_EMISSION_RATE = 1e17;
     uint256 public constant ENTITY_EMISSION_RATE = 1e17;
+    uint256 public constant MAX_ABS_DELTA = 1e5;
 
     MockERC20 public stakingToken;
     MockERC20 public rewardToken;
@@ -594,6 +595,90 @@ contract StakingRewardsTest is Test {
 
     /* ================= REWARD CALCULATION ================= */
 
+    function test_earned_oneUser_oneEntity() public {
+        vm.prank(alice);
+        stakingRewards.stake(entity1, stakeAmount1);
+
+        skip(timeElapsed);
+
+        uint256 earnedRewards1 = stakingRewards.earned(alice, entity1);
+        assertEq(earnedRewards1, _getEarnedExpected(stakeAmount1, stakeAmount1, stakeAmount1));
+    }
+
+    function test_earned_pass_oneUser_multipleEntities() public {
+        vm.prank(alice);
+        stakingRewards.stake(entity1, stakeAmount1);
+
+        vm.prank(alice);
+        stakingRewards.stake(entity2, stakeAmount2);
+
+        skip(timeElapsed);
+
+        uint256 earnedRewards1 = stakingRewards.earned(alice, entity1);
+        assertApproxEqAbs(
+            earnedRewards1, _getEarnedExpected(stakeAmount1, stakeAmount1, stakeAmount1 + stakeAmount2), MAX_ABS_DELTA
+        );
+        uint256 earnedRewards2 = stakingRewards.earned(alice, entity2);
+        assertApproxEqAbs(
+            earnedRewards2, _getEarnedExpected(stakeAmount2, stakeAmount2, stakeAmount1 + stakeAmount2), MAX_ABS_DELTA
+        );
+    }
+
+    function test_earned_multipleUsers_oneEntity() public {
+        vm.prank(alice);
+        stakingRewards.stake(entity1, stakeAmount1);
+
+        vm.prank(bob);
+        stakingRewards.stake(entity1, stakeAmount2);
+
+        skip(timeElapsed);
+
+        uint256 earnedRewards1 = stakingRewards.earned(alice, entity1);
+        assertApproxEqAbs(
+            earnedRewards1,
+            _getEarnedExpected(stakeAmount1, stakeAmount1 + stakeAmount2, stakeAmount1 + stakeAmount2),
+            MAX_ABS_DELTA
+        );
+        uint256 earnedRewards2 = stakingRewards.earned(bob, entity1);
+        assertApproxEqAbs(
+            earnedRewards2,
+            _getEarnedExpected(stakeAmount2, stakeAmount1 + stakeAmount2, stakeAmount1 + stakeAmount2),
+            MAX_ABS_DELTA
+        );
+    }
+
+    function test_earned_multipleUsers_multipleEntities() public {
+        vm.prank(alice);
+        stakingRewards.stake(entity1, stakeAmount1);
+
+        vm.prank(bob);
+        stakingRewards.stake(entity1, stakeAmount2);
+
+        vm.prank(carol);
+        stakingRewards.stake(entity2, stakeAmount3);
+
+        skip(timeElapsed);
+
+        uint256 earnedRewards1 = stakingRewards.earned(alice, entity1);
+        assertApproxEqAbs(
+            earnedRewards1,
+            _getEarnedExpected(stakeAmount1, stakeAmount1 + stakeAmount2, stakeAmount1 + stakeAmount2 + stakeAmount3),
+            MAX_ABS_DELTA
+        );
+        uint256 earnedRewards2 = stakingRewards.earned(bob, entity1);
+        assertApproxEqAbs(
+            earnedRewards2,
+            _getEarnedExpected(stakeAmount2, stakeAmount1 + stakeAmount2, stakeAmount1 + stakeAmount2 + stakeAmount3),
+            MAX_ABS_DELTA
+        );
+        uint256 earnedRewards3 = stakingRewards.earned(carol, entity2);
+        assertApproxEqAbs(
+            earnedRewards3,
+            _getEarnedExpected(stakeAmount3, stakeAmount3, stakeAmount1 + stakeAmount2 + stakeAmount3),
+            MAX_ABS_DELTA
+        );
+    }
+
     /* ================= RATES ================= */
 
     function test_globalRate_noStake() public view {
@@ -628,13 +713,10 @@ contract StakingRewardsTest is Test {
         stakingRewards.stake(entity2, stakeAmount3);
 
         uint256 entityRate1 = stakingRewards.entityRate(entity1);
-        assertEq(entityRate1, (stakeAmount1 * ENTITY_EMISSION_RATE) / (stakeAmount1 + stakeAmount2 + stakeAmount3));
+        assertEq(entityRate1, ENTITY_EMISSION_RATE * PRECISION / stakeAmount1);
 
         uint256 entityRate2 = stakingRewards.entityRate(entity2);
-        assertEq(
-            entityRate2,
-            ((stakeAmount2 + stakeAmount3) * ENTITY_EMISSION_RATE) / (stakeAmount1 + stakeAmount2 + stakeAmount3)
-        );
+        assertEq(entityRate2, ENTITY_EMISSION_RATE * PRECISION / (stakeAmount2 + stakeAmount3));
     }
 
     /* ================= INTERNAL ================= */
@@ -649,5 +731,13 @@ contract StakingRewardsTest is Test {
         rewardAliceBalanceBefore = rewardToken.balanceOf(alice);
         rewardBobBalanceBefore = rewardToken.balanceOf(bob);
         rewardCarolBalanceBefore = rewardToken.balanceOf(carol);
+    }
+
+    function _getEarnedExpected(uint256 actorStake, uint256 entityStaked, uint256 globalStaked)
+        internal
+        view
+        returns (uint256)
+    {
+        return (actorStake * ENTITY_EMISSION_RATE * GLOBAL_EMISSION_RATE * timeElapsed) / (entityStaked * globalStaked);
     }
 }

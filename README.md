@@ -36,8 +36,6 @@ E(e,t) = ∫ r2(e,t) · dG
 
 - Tracks entity reward accumulation based on global accumulator changes
 - Rate: `1e17` (0.1 tokens per second base emission)
-- Each entity's rate is proportional to its share: `ENTITY_EMISSION_RATE * entityStaked[e] / globalStaked`
-- Entities with larger stakes accumulate more rewards from the global pool
 - Updates: `updateEntityState()` accumulates rewards, `updateEntityRate()` updates the rate
 - Checkpoint: global accumulator value at last update
 
@@ -221,10 +219,10 @@ This separation allows the system to:
 globalRate = GLOBAL_EMISSION_RATE * PRECISION / globalStaked
 ```
 
-**Entity Rate**: Based on entity's share of total stake
+**Entity Rate**: Distributed across all staked tokens in given entity
 
 ```solidity
-entityRate = ENTITY_EMISSION_RATE * entityStaked[e] / globalStaked
+entityRate = ENTITY_EMISSION_RATE * PRECISION / entityStaked[e]
 ```
 
 ## ⚡ Gas Optimization

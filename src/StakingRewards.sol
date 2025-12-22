@@ -82,7 +82,7 @@ contract StakingRewards {
 
     function entityRate(address entity) public view returns (uint256) {
         if (globalStaked == 0 || entityStaked[entity] == 0) return 0;
-        return (RewardAccumulator.ENTITY_EMISSION_RATE * entityStaked[entity]) / globalStaked;
+        return (RewardAccumulator.ENTITY_EMISSION_RATE * RewardAccumulator.PRECISION) / entityStaked[entity];
     }
 
     /* ================= VIEW FUNCTIONS ================= */
