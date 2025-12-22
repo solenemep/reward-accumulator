@@ -24,13 +24,13 @@ contract RewardAccumulatorTest is Test {
 
     /* ================= GLOBAL ================= */
 
-    function test_Global_initState() public view {
+    function test_globalInitState() public view {
         assertEq(global.accumulator, 0);
         assertEq(global.lastRate, 0);
         assertEq(global.lastUpdate, 0);
     }
 
-    function test_Global_updateGlobal_noTimeElapsed() public {
+    function test_updateGlobal_noTimeElapsed() public {
         _setUpGlobal();
 
         uint256 accumulatorBefore = global.accumulator;
@@ -41,7 +41,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(global.lastUpdate, block.timestamp);
     }
 
-    function test_Global_updateGlobal_withTimeElapsed() public {
+    function test_updateGlobal_withTimeElapsed() public {
         _setUpGlobal();
 
         skip(timeElapsed);
@@ -54,7 +54,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(global.lastUpdate, block.timestamp);
     }
 
-    function test_Global_previewGlobal_noTimeElapsed() public {
+    function test_previewGlobal_noTimeElapsed() public {
         _setUpGlobal();
 
         uint256 preview = global.previewGlobal();
@@ -62,7 +62,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Global_previewGlobal_withTimeElapsed() public {
+    function test_previewGlobal_withTimeElapsed() public {
         _setUpGlobal();
 
         skip(timeElapsed);
@@ -74,13 +74,13 @@ contract RewardAccumulatorTest is Test {
 
     /* ================= ENTITY ================= */
 
-    function test_Entity_initState() public view {
+    function test_entityInitState() public view {
         assertEq(entity.accumulator, 0);
         assertEq(entity.checkpoint, 0);
         assertEq(entity.lastRate, 0);
     }
 
-    function test_Entity_updateEntity_noTimeElapsed() public {
+    function test_updateEntity_noTimeElapsed() public {
         _setUpEntity();
 
         uint256 accumulatorBefore = entity.accumulator;
@@ -92,7 +92,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(entity.lastRate, entityRate);
     }
 
-    function test_Entity_updateEntity_withTimeElapsed() public {
+    function test_updateEntity_withTimeElapsed() public {
         _setUpEntity();
 
         skip(timeElapsed);
@@ -110,7 +110,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(entity.lastRate, entityRate);
     }
 
-    function test_Entity_previewEntity_noTimeElapsed() public {
+    function test_previewEntity_noTimeElapsed() public {
         _setUpEntity();
 
         uint256 preview = entity.previewEntity(global.accumulator);
@@ -118,7 +118,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Entity_previewEntity_withTimeElapsed() public {
+    function test_previewEntity_withTimeElapsed() public {
         _setUpEntity();
 
         skip(timeElapsed);
@@ -131,12 +131,12 @@ contract RewardAccumulatorTest is Test {
 
     /* ================= ACTOR ================= */
 
-    function test_Actor_initState() public view {
+    function test_actorInitState() public view {
         assertEq(actor.accumulator, 0);
         assertEq(actor.checkpoint, 0);
     }
 
-    function test_Actor_updateActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_updateActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
@@ -150,7 +150,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, 0);
     }
 
-    function test_Actor_updateActor_noTimeElapsed_withStakeChange_noPaidRewards() public {
+    function test_updateActor_noTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
@@ -164,7 +164,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, 0);
     }
 
-    function test_Actor_updateActor_noTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_updateActor_noTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
@@ -178,7 +178,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, 0);
     }
 
-    function test_Actor_updateActor_withTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_updateActor_withTimeElapsed_noStakeChange_noPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
@@ -193,7 +193,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, 0);
     }
 
-    function test_Actor_updateActor_withTimeElapsed_withStakeChange_noPaidRewards() public {
+    function test_updateActor_withTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
@@ -211,7 +211,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, actor.accumulator);
     }
 
-    function test_Actor_updateActor_withTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_updateActor_withTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
@@ -229,7 +229,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(reward, actor.accumulator - paidRewards);
     }
 
-    function test_Actor_previewActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_previewActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 preview = actor.previewActor(0, entity.previewEntity(global.accumulator));
@@ -237,7 +237,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Actor_previewActor_noTimeElapsed_withStakeChange_noPaidRewards() public {
+    function test_previewActor_noTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 preview = actor.previewActor(stakeAmount, entity.previewEntity(global.accumulator));
@@ -245,7 +245,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Actor_previewActor_noTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_previewActor_noTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         uint256 preview = actor.previewActor(stakeAmount, entity.previewEntity(global.accumulator));
@@ -253,7 +253,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Actor_previewActor_withTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_previewActor_withTimeElapsed_noStakeChange_noPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
@@ -263,7 +263,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Actor_previewActor_withTimeElapsed_withStakeChange_noPaidRewards() public {
+    function test_previewActor_withTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
@@ -274,7 +274,7 @@ contract RewardAccumulatorTest is Test {
         assertEq(preview, expected);
     }
 
-    function test_Actor_previewActor_withTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_previewActor_withTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
