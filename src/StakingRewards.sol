@@ -30,7 +30,7 @@ contract StakingRewards {
         STAKING_TOKEN = IERC20(stakingTokenAddress);
         REWARD_TOKEN = IERC20(rewardTokenAddress);
 
-        _syncGlobal();
+        _syncGlobalRate();
     }
 
     /* ================= USER ACTIONS ================= */
@@ -38,7 +38,7 @@ contract StakingRewards {
     function stake(address entity, uint256 amount) external {
         require(amount > 0, "amount = 0");
 
-        _syncActor(msg.sender, entity);
+        _syncActorState(msg.sender, entity);
 
         require(STAKING_TOKEN.transferFrom(msg.sender, address(this), amount), "transferFrom failed");
 
@@ -46,26 +46,26 @@ contract StakingRewards {
         entityStaked[entity] += amount;
         globalStaked += amount;
 
-        _syncEntity(entity);
+        _syncEntityRate(entity);
     }
 
     function withdraw(address entity, uint256 amount) external {
         require(amount > 0, "amount = 0");
         require(actorStaked[msg.sender][entity] >= amount, "insufficient stake");
 
-        _syncActor(msg.sender, entity);
+        _syncActorState(msg.sender, entity);
 
         actorStaked[msg.sender][entity] -= amount;
         entityStaked[entity] -= amount;
         globalStaked -= amount;
 
-        _syncEntity(entity);
+        _syncEntityRate(entity);
 
         require(STAKING_TOKEN.transfer(msg.sender, amount), "transfer failed");
     }
 
     function claim(address entity) external {
-        uint256 reward = _syncActor(msg.sender, entity);
+        uint256 reward = _syncActorState(msg.sender, entity);
 
         if (reward > 0) {
             actorPaid[msg.sender][entity] += reward;
@@ -97,19 +97,31 @@ contract StakingRewards {
 
     /* ================= INTERNAL ================= */
 
-    function _syncGlobal() internal {
-        global.updateGlobal(globalRate());
+    function _syncGlobalState() internal {
+        global.updateGlobalState();
     }
 
-    function _syncEntity(address entity) internal {
-        _syncGlobal();
-
-        entities[entity].updateEntity(global, entityRate(entity));
+    function _syncGlobalRate() internal {
+        global.updateGlobalRate(globalRate());
     }
 
-    function _syncActor(address actor, address entity) internal returns (uint256) {
-        _syncEntity(entity);
+    function _syncEntityState(address entity) internal {
+        _syncGlobalState();
 
-        return actors[actor][entity].updateActor(entities[entity], actorStaked[actor][entity], actorPaid[actor][entity]);
+        entities[entity].updateEntityState(global);
+    }
+
+    function _syncEntityRate(address entity) internal {
+        _syncGlobalRate();
+
+        entities[entity].updateEntityRate(entityRate(entity));
+    }
+
+    function _syncActorState(address actor, address entity) internal returns (uint256) {
+        _syncEntityState(entity);
+
+        return actors[actor][entity].updateActorState(
+            entities[entity], actorStaked[actor][entity], actorPaid[actor][entity]
+        );
     }
 }

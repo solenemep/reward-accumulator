@@ -14,10 +14,13 @@ library RewardAccumulator {
         uint256 lastUpdate; // timestamp of last update
     }
 
-    function updateGlobal(Global storage g, uint256 newRate) internal {
+    function updateGlobalState(Global storage g) internal {
         g.accumulator = _accumulateGlobal(g.accumulator, g.lastRate, g.lastUpdate);
-        g.lastRate = newRate;
         g.lastUpdate = block.timestamp;
+    }
+
+    function updateGlobalRate(Global storage g, uint256 newRate) internal {
+        g.lastRate = newRate;
     }
 
     function previewGlobal(Global storage g) internal view returns (uint256) {
@@ -32,9 +35,12 @@ library RewardAccumulator {
         uint256 lastRate; // r2(e, t)
     }
 
-    function updateEntity(Entity storage e, Global storage g, uint256 newRate) internal {
+    function updateEntityState(Entity storage e, Global storage g) internal {
         e.accumulator = _accumulateEntity(e.accumulator, e.checkpoint, e.lastRate, g.accumulator);
         e.checkpoint = g.accumulator;
+    }
+
+    function updateEntityRate(Entity storage e, uint256 newRate) internal {
         e.lastRate = newRate;
     }
 
@@ -49,7 +55,7 @@ library RewardAccumulator {
         uint256 checkpoint; // checkpointActorEntity(a, e)
     }
 
-    function updateActor(Actor storage a, Entity storage e, uint256 stake, uint256 paid)
+    function updateActorState(Actor storage a, Entity storage e, uint256 stake, uint256 paid)
         internal
         returns (uint256 rewards)
     {

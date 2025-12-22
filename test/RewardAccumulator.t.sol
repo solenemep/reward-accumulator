@@ -15,8 +15,13 @@ contract RewardAccumulatorTest is Test {
     RewardAccumulator.Actor public actor;
 
     uint256 public timeElapsed = 100;
+
+    uint256 public initGlobalRate = 2e18;
     uint256 public globalRate = 1e18;
+
+    uint256 public initEntityRate = 2e17;
     uint256 public entityRate = 5e17;
+
     uint256 public stakeAmount = 100e18;
     uint256 public paidRewards = 5e16;
 
@@ -30,28 +35,50 @@ contract RewardAccumulatorTest is Test {
         assertEq(global.lastUpdate, 0);
     }
 
-    function test_updateGlobal_noTimeElapsed() public {
+    function test_updateGlobalState_noTimeElapsed() public {
         _setUpGlobal();
 
         uint256 accumulatorBefore = global.accumulator;
-        global.updateGlobal(globalRate);
+        global.updateGlobalState();
+
+        assertEq(global.accumulator, accumulatorBefore);
+        assertEq(global.lastRate, initGlobalRate);
+        assertEq(global.lastUpdate, block.timestamp);
+    }
+
+    function test_updateGlobalState_withTimeElapsed() public {
+        _setUpGlobal();
+
+        skip(timeElapsed);
+        uint256 accumulatorBefore = global.accumulator;
+        global.updateGlobalState();
+
+        assertEq(global.accumulator, accumulatorBefore + (initGlobalRate * timeElapsed));
+        assertEq(global.lastRate, initGlobalRate);
+        assertEq(global.lastUpdate, block.timestamp);
+    }
+
+    function test_updateGlobalRate_noTimeElapsed() public {
+        _setUpGlobal();
+
+        uint256 accumulatorBefore = global.accumulator;
+        global.updateGlobalRate(globalRate);
 
         assertEq(global.accumulator, accumulatorBefore);
         assertEq(global.lastRate, globalRate);
         assertEq(global.lastUpdate, block.timestamp);
     }
 
-    function test_updateGlobal_withTimeElapsed() public {
+    function test_updateGlobalRate_withTimeElapsed() public {
         _setUpGlobal();
 
         skip(timeElapsed);
         uint256 accumulatorBefore = global.accumulator;
-        uint256 lastRate = global.lastRate;
-        global.updateGlobal(globalRate);
+        global.updateGlobalRate(globalRate);
 
-        assertEq(global.accumulator, accumulatorBefore + (lastRate * timeElapsed));
+        assertEq(global.accumulator, accumulatorBefore);
         assertEq(global.lastRate, globalRate);
-        assertEq(global.lastUpdate, block.timestamp);
+        assertEq(global.lastUpdate, block.timestamp - timeElapsed);
     }
 
     function test_previewGlobal_noTimeElapsed() public {
@@ -80,32 +107,54 @@ contract RewardAccumulatorTest is Test {
         assertEq(entity.lastRate, 0);
     }
 
-    function test_updateEntity_noTimeElapsed() public {
+    function test_updateEntityState_noTimeElapsed() public {
         _setUpEntity();
 
         uint256 accumulatorBefore = entity.accumulator;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+
+        assertEq(entity.accumulator, accumulatorBefore);
+        assertEq(entity.checkpoint, global.accumulator);
+        assertEq(entity.lastRate, initEntityRate);
+    }
+
+    function test_updateEntityState_withTimeElapsed() public {
+        _setUpEntity();
+
+        skip(timeElapsed);
+        uint256 accumulatorBefore = entity.accumulator;
+        uint256 checkpointBefore = entity.checkpoint;
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+
+        assertEq(
+            entity.accumulator,
+            accumulatorBefore + initEntityRate * (global.accumulator - checkpointBefore) / RewardAccumulator.PRECISION
+        );
+        assertEq(entity.checkpoint, global.accumulator);
+        assertEq(entity.lastRate, initEntityRate);
+    }
+
+    function test_updateEntityRate_noTimeElapsed() public {
+        _setUpEntity();
+
+        uint256 accumulatorBefore = entity.accumulator;
+        entity.updateEntityRate(entityRate);
 
         assertEq(entity.accumulator, accumulatorBefore);
         assertEq(entity.checkpoint, global.accumulator);
         assertEq(entity.lastRate, entityRate);
     }
 
-    function test_updateEntity_withTimeElapsed() public {
+    function test_updateEntityRate_withTimeElapsed() public {
         _setUpEntity();
 
         skip(timeElapsed);
         uint256 accumulatorBefore = entity.accumulator;
-        uint256 checkpointBefore = entity.checkpoint;
-        uint256 lastRate = entity.lastRate;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
+        entity.updateEntityRate(entityRate);
 
-        assertEq(
-            entity.accumulator,
-            accumulatorBefore + lastRate * (global.accumulator - checkpointBefore) / RewardAccumulator.PRECISION
-        );
+        assertEq(entity.accumulator, accumulatorBefore);
         assertEq(entity.checkpoint, global.accumulator);
         assertEq(entity.lastRate, entityRate);
     }
@@ -136,72 +185,68 @@ contract RewardAccumulatorTest is Test {
         assertEq(actor.checkpoint, 0);
     }
 
-    function test_updateActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_updateActorState_noTimeElapsed_noStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
-        uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, 0, 0);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, 0, 0);
 
         assertEq(actor.accumulator, accumulatorBefore);
         assertEq(actor.checkpoint, entity.accumulator);
         assertEq(reward, 0);
     }
 
-    function test_updateActor_noTimeElapsed_withStakeChange_noPaidRewards() public {
+    function test_updateActorState_noTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
-        uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, stakeAmount, 0);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, stakeAmount, 0);
 
         assertEq(actor.accumulator, accumulatorBefore);
         assertEq(actor.checkpoint, entity.accumulator);
         assertEq(reward, 0);
     }
 
-    function test_updateActor_noTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_updateActorState_noTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         uint256 accumulatorBefore = actor.accumulator;
-        uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, stakeAmount, paidRewards);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, stakeAmount, paidRewards);
 
         assertEq(actor.accumulator, accumulatorBefore);
         assertEq(actor.checkpoint, entity.accumulator);
         assertEq(reward, 0);
     }
 
-    function test_updateActor_withTimeElapsed_noStakeChange_noPaidRewards() public {
+    function test_updateActorState_withTimeElapsed_noStakeChange_noPaidRewards() public {
+        _setUpActor();
+
+        skip(timeElapsed);
+        uint256 accumulatorBefore = actor.accumulator;
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, 0, 0);
+
+        assertEq(actor.accumulator, accumulatorBefore);
+        assertEq(actor.checkpoint, entity.accumulator);
+        assertEq(reward, 0);
+    }
+
+    function test_updateActorState_withTimeElapsed_withStakeChange_noPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
         uint256 accumulatorBefore = actor.accumulator;
         uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, 0, 0);
-
-        assertEq(actor.accumulator, accumulatorBefore);
-        assertEq(actor.checkpoint, entity.accumulator);
-        assertEq(reward, 0);
-    }
-
-    function test_updateActor_withTimeElapsed_withStakeChange_noPaidRewards() public {
-        _setUpActor();
-
-        skip(timeElapsed);
-        uint256 accumulatorBefore = actor.accumulator;
-        uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, stakeAmount, 0);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, stakeAmount, 0);
 
         assertEq(
             actor.accumulator,
@@ -209,17 +254,18 @@ contract RewardAccumulatorTest is Test {
         );
         assertEq(actor.checkpoint, entity.accumulator);
         assertEq(reward, actor.accumulator);
+        assertTrue(reward > 0);
     }
 
-    function test_updateActor_withTimeElapsed_withStakeChange_withPaidRewards() public {
+    function test_updateActorState_withTimeElapsed_withStakeChange_withPaidRewards() public {
         _setUpActor();
 
         skip(timeElapsed);
         uint256 accumulatorBefore = actor.accumulator;
         uint256 checkpointBefore = actor.checkpoint;
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        uint256 reward = actor.updateActor(entity, stakeAmount, paidRewards);
+        global.updateGlobalState();
+        entity.updateEntityState(global);
+        uint256 reward = actor.updateActorState(entity, stakeAmount, paidRewards);
 
         assertEq(
             actor.accumulator,
@@ -227,6 +273,7 @@ contract RewardAccumulatorTest is Test {
         );
         assertEq(actor.checkpoint, entity.accumulator);
         assertEq(reward, actor.accumulator - paidRewards);
+        assertTrue(reward > 0);
     }
 
     function test_previewActor_noTimeElapsed_noStakeChange_noPaidRewards() public {
@@ -289,19 +336,18 @@ contract RewardAccumulatorTest is Test {
 
     function _setUpGlobal() internal {
         skip(timeElapsed);
-        global.updateGlobal(globalRate);
+        global.updateGlobalState();
+        global.updateGlobalRate(initGlobalRate);
     }
 
     function _setUpEntity() internal {
-        skip(timeElapsed);
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
+        _setUpGlobal();
+        entity.updateEntityState(global);
+        entity.updateEntityRate(initEntityRate);
     }
 
     function _setUpActor() internal {
-        skip(timeElapsed);
-        global.updateGlobal(globalRate);
-        entity.updateEntity(global, entityRate);
-        actor.updateActor(entity, stakeAmount, paidRewards);
+        _setUpEntity();
+        actor.updateActorState(entity, stakeAmount, paidRewards);
     }
 }

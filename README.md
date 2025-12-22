@@ -15,7 +15,7 @@ A gas-optimized, mathematically rigorous staking rewards distribution system bui
 
 ### Reward Accumulator Library
 
-The `RewardAccumulator` library implements a three-level hierarchical accumulation system:
+The `RewardAccumulator` library implements a three-level hierarchical accumulation system with **separated state and rate management** for optimal gas efficiency:
 
 #### 1. Global Level
 
@@ -25,6 +25,8 @@ G(t) = ∫ r1(t) dt
 
 - Tracks global reward accumulation over time
 - Rate: `1e17` (0.1 tokens per second per unit)
+- Updates: `updateGlobalState()` accumulates rewards, `updateGlobalRate()` updates the rate
+- Checkpoint: timestamp of last update
 
 #### 2. Entity Level
 
@@ -36,6 +38,8 @@ E(e,t) = ∫ r2(e,t) · dG
 - Rate: `1e17` (0.1 tokens per second base emission)
 - Each entity's rate is proportional to its share: `ENTITY_EMISSION_RATE * entityStaked[e] / globalStaked`
 - Entities with larger stakes accumulate more rewards from the global pool
+- Updates: `updateEntityState()` accumulates rewards, `updateEntityRate()` updates the rate
+- Checkpoint: global accumulator value at last update
 
 #### 3. Actor Level
 
@@ -45,6 +49,8 @@ A(a,e,t) = ∫ s(a,e,t) · dE
 
 - Individual user (actor) rewards within an entity
 - Proportional to actor's stake in the entity
+- Updates: `updateActorState()` accumulates rewards and returns claimable amount
+- Checkpoint: entity accumulator value at last update
 
 ### StakingRewards Contract
 
@@ -189,9 +195,23 @@ forge test --match-contract StakingRewardsTest
 
 The accumulator pattern uses checkpoints to avoid recalculating rewards from genesis:
 
-- **Global Checkpoint**: Stored per-entity to track global accumulator state
-- **Entity Checkpoint**: Stored per-actor-entity pair to track entity accumulator state
+- **Global Checkpoint**: Timestamp of last global update
+- **Entity Checkpoint**: Global accumulator value at last entity update
+- **Actor Checkpoint**: Entity accumulator value at last actor update
 - **Rewards = Current Accumulator - Checkpoint**
+
+### State vs Rate Updates
+
+The system separates state updates (accumulation) from rate updates for efficiency:
+
+- **State Updates**: `updateGlobalState()`, `updateEntityState()`, `updateActorState()` - accumulate rewards based on time/delta
+- **Rate Updates**: `updateGlobalRate()`, `updateEntityRate()` - update the rate used for future accumulations
+
+This separation allows the system to:
+
+1. Accumulate rewards with the old rate before a stake change
+2. Update the rate after a stake change without unnecessary reaccumulation
+3. Minimize gas costs by avoiding redundant calculations
 
 ### Rate Calculations
 
