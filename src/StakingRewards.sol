@@ -45,6 +45,8 @@ contract StakingRewards {
         actorStaked[msg.sender][entity] += amount;
         entityStaked[entity] += amount;
         globalStaked += amount;
+
+        _syncEntity(entity);
     }
 
     function withdraw(address entity, uint256 amount) external {
@@ -56,6 +58,8 @@ contract StakingRewards {
         actorStaked[msg.sender][entity] -= amount;
         entityStaked[entity] -= amount;
         globalStaked -= amount;
+
+        _syncEntity(entity);
 
         require(STAKING_TOKEN.transfer(msg.sender, amount), "transfer failed");
     }
