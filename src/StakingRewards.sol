@@ -13,6 +13,8 @@ contract StakingRewards {
     IERC20 public immutable STAKING_TOKEN;
     IERC20 public immutable REWARD_TOKEN;
 
+    bool private _locked;
+
     /* ================= STAKING ================= */
 
     uint256 public globalStaked; // staked
@@ -26,16 +28,37 @@ contract StakingRewards {
     mapping(address => RewardAccumulator.Entity) public entities;
     mapping(address => mapping(address => RewardAccumulator.Actor)) public actors;
 
+    /* ================= EVENTS ================= */
+
+    event Staked(address indexed actor, address indexed entity, uint256 amount);
+    event Withdrawn(address indexed actor, address indexed entity, uint256 amount);
+    event Claimed(address indexed actor, address indexed entity, uint256 reward);
+
+    /* ================= CONSTRUCTOR ================= */
+
     constructor(address stakingTokenAddress, address rewardTokenAddress) {
+        require(stakingTokenAddress != address(0), "invalid staking token");
+        require(rewardTokenAddress != address(0), "invalid reward token");
+
         STAKING_TOKEN = IERC20(stakingTokenAddress);
         REWARD_TOKEN = IERC20(rewardTokenAddress);
 
         _syncGlobalRate();
     }
 
+    /* ================= MODIFIERS ================= */
+
+    modifier nonReentrant() {
+        require(!_locked, "reentrant call");
+        _locked = true;
+        _;
+        _locked = false;
+    }
+
     /* ================= USER ACTIONS ================= */
 
-    function stake(address entity, uint256 amount) external {
+    function stake(address entity, uint256 amount) external nonReentrant {
+        require(entity != address(0), "invalid entity");
         require(amount > 0, "amount = 0");
 
         _syncActorState(msg.sender, entity);
@@ -47,9 +70,12 @@ contract StakingRewards {
         globalStaked += amount;
 
         _syncEntityRate(entity);
+
+        emit Staked(msg.sender, entity, amount);
     }
 
-    function withdraw(address entity, uint256 amount) external {
+    function withdraw(address entity, uint256 amount) external nonReentrant {
+        require(entity != address(0), "invalid entity");
         require(amount > 0, "amount = 0");
         require(actorStaked[msg.sender][entity] >= amount, "insufficient stake");
 
@@ -61,15 +87,20 @@ contract StakingRewards {
 
         _syncEntityRate(entity);
 
-        require(STAKING_TOKEN.transfer(msg.sender, amount), "transfer failed");
+        require(STAKING_TOKEN.transfer(msg.sender, amount), "staking token transfer failed");
+
+        emit Withdrawn(msg.sender, entity, amount);
     }
 
-    function claim(address entity) external {
+    function claim(address entity) external nonReentrant {
+        require(entity != address(0), "invalid entity");
+
         uint256 reward = _syncActorState(msg.sender, entity);
 
         if (reward > 0) {
             actorPaid[msg.sender][entity] += reward;
-            require(REWARD_TOKEN.transfer(msg.sender, reward), "transfer failed");
+            require(REWARD_TOKEN.transfer(msg.sender, reward), "reward token transfer failed");
+            emit Claimed(msg.sender, entity, reward);
         }
     }
 
@@ -81,7 +112,7 @@ contract StakingRewards {
     }
 
     function entityRate(address entity) public view returns (uint256) {
-        if (globalStaked == 0 || entityStaked[entity] == 0) return 0;
+        if (entityStaked[entity] == 0) return 0;
         return (RewardAccumulator.ENTITY_EMISSION_RATE * RewardAccumulator.PRECISION) / entityStaked[entity];
     }
 

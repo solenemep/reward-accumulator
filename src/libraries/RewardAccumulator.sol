@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 library RewardAccumulator {
     uint256 public constant PRECISION = 1e18;
+    // Fixed emission rates chosen for gas efficiency. To make these configurable,
+    // move them to storage variables with a governance or owner-controlled setter.
     uint256 public constant GLOBAL_EMISSION_RATE = 1e17;
     uint256 public constant ENTITY_EMISSION_RATE = 1e17;
 
@@ -90,6 +92,8 @@ library RewardAccumulator {
         eAccumulator = accumulator;
 
         uint256 dG = gAccumulator - checkpoint;
+        // Integer division truncates remainders; rewards round to zero for very small rates
+        // or short intervals. Ensure sufficient stake amounts and time periods for non-zero rewards.
         if (dG > 0 && rate > 0) eAccumulator += (rate * dG) / PRECISION;
     }
 
@@ -101,6 +105,8 @@ library RewardAccumulator {
         aAccumulator = accumulator;
 
         uint256 dE = eAccumulator - checkpoint;
+        // Integer division truncates remainders; rewards round to zero for very small stakes
+        // or short intervals. See note in _accumulateEntity.
         if (dE > 0 && stake > 0) aAccumulator += (stake * dE) / PRECISION;
     }
 }
