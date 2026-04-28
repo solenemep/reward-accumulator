@@ -12,21 +12,21 @@ library RewardAccumulator {
 
     struct Global {
         uint256 accumulator; // G(t) = ∫ r1(t) dt
-        uint256 lastRate; // r1(t)
+        uint256 currentRate; // r1(t)
         uint256 lastUpdate; // timestamp of last update
     }
 
     function updateGlobalState(Global storage g) internal {
-        g.accumulator = _accumulateGlobal(g.accumulator, g.lastRate, g.lastUpdate);
+        g.accumulator = _accumulateGlobal(g.accumulator, g.currentRate, g.lastUpdate);
         g.lastUpdate = block.timestamp;
     }
 
     function updateGlobalRate(Global storage g, uint256 newRate) internal {
-        g.lastRate = newRate;
+        g.currentRate = newRate;
     }
 
     function previewGlobal(Global storage g) internal view returns (uint256) {
-        return _accumulateGlobal(g.accumulator, g.lastRate, g.lastUpdate);
+        return _accumulateGlobal(g.accumulator, g.currentRate, g.lastUpdate);
     }
 
     /* ================= ENTITY ================= */
@@ -34,20 +34,20 @@ library RewardAccumulator {
     struct Entity {
         uint256 accumulator; // E(e, t) = ∫ r2(e, t) · dG
         uint256 checkpoint; // checkpointEntityGlobal(e)
-        uint256 lastRate; // r2(e, t)
+        uint256 currentRate; // r2(e, t)
     }
 
     function updateEntityState(Entity storage e, Global storage g) internal {
-        e.accumulator = _accumulateEntity(e.accumulator, e.checkpoint, e.lastRate, g.accumulator);
+        e.accumulator = _accumulateEntity(e.accumulator, e.checkpoint, e.currentRate, g.accumulator);
         e.checkpoint = g.accumulator;
     }
 
     function updateEntityRate(Entity storage e, uint256 newRate) internal {
-        e.lastRate = newRate;
+        e.currentRate = newRate;
     }
 
     function previewEntity(Entity storage e, uint256 gAccumulator) internal view returns (uint256) {
-        return _accumulateEntity(e.accumulator, e.checkpoint, e.lastRate, gAccumulator);
+        return _accumulateEntity(e.accumulator, e.checkpoint, e.currentRate, gAccumulator);
     }
 
     /* ================= ACTOR ================= */

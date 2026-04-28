@@ -31,7 +31,7 @@ contract RewardAccumulatorTest is Test {
 
     function test_globalInitState() public view {
         assertEq(global.accumulator, 0);
-        assertEq(global.lastRate, 0);
+        assertEq(global.currentRate, 0);
         assertEq(global.lastUpdate, 0);
     }
 
@@ -42,7 +42,7 @@ contract RewardAccumulatorTest is Test {
         global.updateGlobalState();
 
         assertEq(global.accumulator, accumulatorBefore);
-        assertEq(global.lastRate, initGlobalRate);
+        assertEq(global.currentRate, initGlobalRate);
         assertEq(global.lastUpdate, block.timestamp);
     }
 
@@ -54,7 +54,7 @@ contract RewardAccumulatorTest is Test {
         global.updateGlobalState();
 
         assertEq(global.accumulator, accumulatorBefore + (initGlobalRate * timeElapsed));
-        assertEq(global.lastRate, initGlobalRate);
+        assertEq(global.currentRate, initGlobalRate);
         assertEq(global.lastUpdate, block.timestamp);
     }
 
@@ -65,7 +65,7 @@ contract RewardAccumulatorTest is Test {
         global.updateGlobalRate(globalRate);
 
         assertEq(global.accumulator, accumulatorBefore);
-        assertEq(global.lastRate, globalRate);
+        assertEq(global.currentRate, globalRate);
         assertEq(global.lastUpdate, block.timestamp);
     }
 
@@ -77,7 +77,7 @@ contract RewardAccumulatorTest is Test {
         global.updateGlobalRate(globalRate);
 
         assertEq(global.accumulator, accumulatorBefore);
-        assertEq(global.lastRate, globalRate);
+        assertEq(global.currentRate, globalRate);
         assertEq(global.lastUpdate, block.timestamp - timeElapsed);
     }
 
@@ -95,7 +95,7 @@ contract RewardAccumulatorTest is Test {
         skip(timeElapsed);
 
         uint256 preview = global.previewGlobal();
-        uint256 expected = global.accumulator + (global.lastRate * timeElapsed);
+        uint256 expected = global.accumulator + (global.currentRate * timeElapsed);
         assertEq(preview, expected);
     }
 
@@ -104,7 +104,7 @@ contract RewardAccumulatorTest is Test {
     function test_entityInitState() public view {
         assertEq(entity.accumulator, 0);
         assertEq(entity.checkpoint, 0);
-        assertEq(entity.lastRate, 0);
+        assertEq(entity.currentRate, 0);
     }
 
     function test_updateEntityState_noTimeElapsed() public {
@@ -116,7 +116,7 @@ contract RewardAccumulatorTest is Test {
 
         assertEq(entity.accumulator, accumulatorBefore);
         assertEq(entity.checkpoint, global.accumulator);
-        assertEq(entity.lastRate, initEntityRate);
+        assertEq(entity.currentRate, initEntityRate);
     }
 
     function test_updateEntityState_withTimeElapsed() public {
@@ -133,7 +133,7 @@ contract RewardAccumulatorTest is Test {
             accumulatorBefore + initEntityRate * (global.accumulator - checkpointBefore) / RewardAccumulator.PRECISION
         );
         assertEq(entity.checkpoint, global.accumulator);
-        assertEq(entity.lastRate, initEntityRate);
+        assertEq(entity.currentRate, initEntityRate);
     }
 
     function test_updateEntityRate_noTimeElapsed() public {
@@ -144,7 +144,7 @@ contract RewardAccumulatorTest is Test {
 
         assertEq(entity.accumulator, accumulatorBefore);
         assertEq(entity.checkpoint, global.accumulator);
-        assertEq(entity.lastRate, entityRate);
+        assertEq(entity.currentRate, entityRate);
     }
 
     function test_updateEntityRate_withTimeElapsed() public {
@@ -156,7 +156,7 @@ contract RewardAccumulatorTest is Test {
 
         assertEq(entity.accumulator, accumulatorBefore);
         assertEq(entity.checkpoint, global.accumulator);
-        assertEq(entity.lastRate, entityRate);
+        assertEq(entity.currentRate, entityRate);
     }
 
     function test_previewEntity_noTimeElapsed() public {
@@ -174,7 +174,7 @@ contract RewardAccumulatorTest is Test {
 
         uint256 preview = entity.previewEntity(global.accumulator);
         uint256 expected = entity.accumulator
-            + entity.lastRate * (global.accumulator - entity.checkpoint) / RewardAccumulator.PRECISION;
+            + entity.currentRate * (global.accumulator - entity.checkpoint) / RewardAccumulator.PRECISION;
         assertEq(preview, expected);
     }
 
